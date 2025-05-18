@@ -1,52 +1,68 @@
 pipeline {
     agent any
     stages {
-        stage ("Get Website") {
+        stage("Get Website") {
             steps {
                 echo "---------------------------------------------------------------------------------"
-                sh 'wget $webpg_url'
-                sh 'ls'
-                sh 'pwd'
-                sh 'unzip $webpg_name.zip'
-                sh 'rm -rf $webpg_name.zip'
-                sh 'ls $webpg_name'
-                echo "----------------"
-                sh 'ls ~'
+                sh "wget ${webpg_url}"
+                sh "ls"
+                pwd()
+                sh "unzip ${webpg_name}.zip"
+                sh "rm -rf ${webpg_name}.zip"
+                sh "ls ${webpg_name}"
                 echo "---------------------------------------------------------------------------------"
             }
         }
-        stage ("Write Dockerfile") {
+
+        stage("Write Dockerfile") {
             steps {
                 script {
-                    // Best practice is to provide the multi-line commands inside a script block.
                     echo "---------------------------------------------------------------------------------"
-                    echo "Creating a Dockerfile in current directory ..."
+                    echo "Creating a Dockerfile in working directory pwd() ..."
                     writeFile file: 'Dockerfile', text: """
-                    FROM httpd
-                    COPY $webpg_name /usr/local/apache2/htdocs/
+                        FROM httpd
+                        COPY ${webpg_name} /usr/local/apache2/htdocs/
                     """.stripIndent()
-                    //stripIndent() >> It removes the unwanted whitespaces before creating a file.
-                    sh 'ls'
+                    sh "ls"
                     echo "Dockerfile created"
-                    echo "--------------------"
-                    sh 'cat Dockerfile'
+                    sh "cat Dockerfile"
                     echo "---------------------------------------------------------------------------------"
                 }
             }
         }
-        stage ("Build the Image") {
+
+        stage("Build the Image") {
             steps {
-                sh 'docker build -t $webpg_name .'
-                sh 'docker images'
+                sh "docker build -t ${webpg_name} ."
+                sh "docker images"
             }
         }
-        stage ("Deploy Application") {
+
+        stage("Push image to Docker Hub") {
             steps {
-                sh 'docker ps -a'
-                sh 'docker run -itd --name $webpg_name-app -p $container_port:80 $webpg_name'
-                sh 'docker ps'
-                echo "Access application by using >> 54.165.46.236:$container_port << "
+                withDockerRegistry(url: 'https://index.docker.io/v1/', credentialsId: 'docker_hub_creds') {
+                    sh "docker tag ${webpg_name} ${docker_hub_registry}:${webpg_name}"
+                    sh "docker push ${docker_hub_registry}:${webpg_name}"
+                }
             }
+        }
+
+        stage("Deploy Application") {
+            steps {
+                sh "docker ps -a"
+                sh "docker run -itd --name ${webpg_name}-app -p ${container_port}:80 ${webpg_name}"
+                sh "docker ps"
+                echo "Access application by using >> http://44.201.119.7:${container_port} <<"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline executed successfully."
+        }
+        failure {
+            echo "Pipeline failed. Please check logs."
         }
     }
 }
