@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+    stages {
+        stage ("Get Website") {
+            steps {
+                echo "---------------------------------------------------------------------------------"
+                sh 'wget $webpg_url'
+                sh 'ls'
+                sh 'pwd'
+                sh 'unzip $webpg_name.zip'
+                sh 'rm -rf $webpg_name.zip'
+                sh 'ls $webpg_name'
+                echo "----------------"
+                sh 'ls ~'
+                echo "---------------------------------------------------------------------------------"
+            }
+        }
+        stage ("Write Dockerfile") {
+            steps {
+                script {
+                    // Best practice is to provide the multi-line commands inside a script block.
+                    echo "---------------------------------------------------------------------------------"
+                    echo "Creating a Dockerfile in current directory ..."
+                    writeFile file: 'Dockerfile', text: """
+                    FROM httpd
+                    COPY $webpg_name /usr/local/apache2/htdocs/
+                    """.stripIndent()
+                    //stripIndent() >> It removes the unwanted whitespaces before creating a file.
+                    sh 'ls'
+                    echo "Dockerfile created"
+                    echo "--------------------"
+                    sh 'cat Dockerfile'
+                    echo "---------------------------------------------------------------------------------"
+                }
+            }
+        }
+        stage ("Build the Image") {
+            steps {
+                sh 'docker build -t $webpg_name .'
+                sh 'docker images'
+            }
+        }
+        stage ("Deploy Application") {
+            steps {
+                sh 'docker ps -a'
+                sh 'docker run -itd --name $webpg_name-app -p $container_port:80 $webpg_name'
+                sh 'docker ps'
+                echo "Access application by using >> 54.165.46.236:$container_port << "
+            }
+        }
+    }
+}
