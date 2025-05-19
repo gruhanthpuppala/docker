@@ -1,11 +1,15 @@
 pipeline {
+    
     agent any
+    
     stages {
-        stage ("Clean WS") {
+        stage ("Clean work space") {
             steps {
+                echo "Cleaning workspace"
                 cleanWs()
             }
         }
+
         stage("Get Website") {
             steps {
                 echo "---------------------------------------------------------------------------------"
@@ -57,7 +61,15 @@ pipeline {
                 sh "docker ps -a"
                 sh "docker run -itd --name ${webpg_name}-app -p ${container_port}:80 ${webpg_name}"
                 sh "docker ps"
-                echo "Access application by using >> http://${curl ifconfig.me}:${container_port} <<"
+            }
+        }
+
+        stage ("View endpoint") {
+            steps {
+                script {
+                    def publicIP=sh(script: 'curl -s ifconfig.me', returnStdout: true).trim()
+                    echo "Access application by using >> http://$publicIP:${container_port} <<"
+                }
             }
         }
     }
