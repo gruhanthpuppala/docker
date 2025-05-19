@@ -1,6 +1,11 @@
 pipeline {
     agent any
     stages {
+        stage ("Clean WS") {
+            steps {
+                cleanWs()
+            }
+        }
         stage("Get Website") {
             steps {
                 echo "---------------------------------------------------------------------------------"
@@ -52,7 +57,7 @@ pipeline {
                 sh "docker ps -a"
                 sh "docker run -itd --name ${webpg_name}-app -p ${container_port}:80 ${webpg_name}"
                 sh "docker ps"
-                echo "Access application by using >> http://44.201.119.7:${container_port} <<"
+                echo "Access application by using >> http://${curl ifconfig.me}:${container_port} <<"
             }
         }
     }
